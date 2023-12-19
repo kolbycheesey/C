@@ -1,15 +1,15 @@
 // C++ Hello World
 #include <iostream>
-/*int main() {
-    std::cout << "Michael\nKolb\n";
-}*/
+int main() {
+    std::cout << "Hello\nWorld\n";
+}
 
 // Variables
-int main() {
+/*int main() {
     //type name = value;
     //type name;
-    name = value;
-}
+    //name = value;
+}*/
 
 // Booleans
 // int main() {
