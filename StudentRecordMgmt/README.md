@@ -1,0 +1,1 @@
+This application will be a student record management app, that will assign a unique identifier to every student in the system and allow for addition of information to each student record.
