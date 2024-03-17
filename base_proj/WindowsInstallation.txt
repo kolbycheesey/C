@@ -1,0 +1,18 @@
+
+1) Move SFML folder
+Unzip downloaded SFML folder and move folder to C:\SFML
+
+1b) Copy DLLs to system32
+Copy files from C:\SFML to C:\Windows\System32
+
+2) Open cmd prompt as administrator
+cd to project directory
+
+3) Link the include files
+g++ -IC:\SFML\include -c main.cpp -o main.o
+
+4) Link the library files
+g++ -LC:\SFML\lib -o main.exe main.o -lsfml-graphics -lsfml-audio -lsfml-window -lsfml-system
+
+5) Run the program
+main.exe
