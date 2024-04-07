@@ -26,9 +26,9 @@ C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\staticwebas
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.MyMicroservice.props
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\staticwebassets.pack.json
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\scopedcss\bundle\MyMicroservice.styles.css
-C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\MyMicroservice.csproj.CopyComplete
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\MyMicroservice.dll
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\refint\MyMicroservice.dll
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\MyMicroservice.pdb
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\MyMicroservice.genruntimeconfig.cache
 C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\ref\MyMicroservice.dll
+C:\Users\mkolb\Documents\Github\C\C#\MyMicroservice\obj\Debug\net8.0\MyMicros.794CF071.Up2Date

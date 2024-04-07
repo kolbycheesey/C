@@ -1,0 +1,15 @@
+C:\Users\mkolb\Documents\Github\C\C#\appTest\bin\Debug\net8.0\appTest.exe
+C:\Users\mkolb\Documents\Github\C\C#\appTest\bin\Debug\net8.0\appTest.deps.json
+C:\Users\mkolb\Documents\Github\C\C#\appTest\bin\Debug\net8.0\appTest.runtimeconfig.json
+C:\Users\mkolb\Documents\Github\C\C#\appTest\bin\Debug\net8.0\appTest.dll
+C:\Users\mkolb\Documents\Github\C\C#\appTest\bin\Debug\net8.0\appTest.pdb
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.AssemblyInfoInputs.cache
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.AssemblyInfo.cs
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.csproj.CoreCompileInputs.cache
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.sourcelink.json
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.dll
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\refint\appTest.dll
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.pdb
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\appTest.genruntimeconfig.cache
+C:\Users\mkolb\Documents\Github\C\C#\appTest\obj\Debug\net8.0\ref\appTest.dll
