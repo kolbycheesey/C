@@ -1,0 +1,11 @@
+Similar to rust
+dotnet new console -o appname
+
+dotnet is the build system
+new states we want a new package
+console
+-o object
+appname is the name of the package you are making
+
+dotnet build -> builds the package need to be inside of appname
+dotnet run -> runs the package
