@@ -14,11 +14,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\C#.csproj",
+      "projectUniqueName": "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\C#.csproj",
       "projectName": "C#",
-      "projectPath": "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\C#.csproj",
+      "projectPath": "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\C#.csproj",
       "packagesPath": "C:\\Users\\mkolb\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\obj\\",
+      "outputPath": "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

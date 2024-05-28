@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\appTest\\appTest.csproj": {}
+    "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\appTest\\appTest.csproj": {}
   },
   "projects": {
-    "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\appTest\\appTest.csproj": {
+    "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\appTest\\appTest.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\appTest\\appTest.csproj",
+        "projectUniqueName": "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\appTest\\appTest.csproj",
         "projectName": "appTest",
-        "projectPath": "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\appTest\\appTest.csproj",
+        "projectPath": "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\appTest\\appTest.csproj",
         "packagesPath": "C:\\Users\\mkolb\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\mkolb\\Documents\\Github\\C\\C#\\appTest\\obj\\",
+        "outputPath": "C:\\Users\\mkolb\\Github\\Personal\\C\\C#\\appTest\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
