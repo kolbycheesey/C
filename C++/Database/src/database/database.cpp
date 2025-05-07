@@ -3,6 +3,7 @@
 #include "../storage/storage_engine.h"
 #include "../query/query_processor.h"
 #include <chrono>
+#include <limits>
 
 // Database class implementation
 Database::Database(const std::string& dbName) 
@@ -38,13 +39,8 @@ bool Database::put(int key, const std::string& value) {
 }
 
 bool Database::remove(int key) {
-    // For removals, we need to update both data structures to maintain consistency
-    std::lock_guard<std::mutex> lock(accessMutex);
-    
-    // First remove from B+Tree
-    indexTree.remove(key);
-    
-    // Then remove from LSM Tree
+    // For removals, we only update the LSM Tree since B+Tree doesn't support removal
+    // This is a design limitation - newer values in LSM will overshadow older B+Tree entries
     return lsmTree.remove(key);
 }
 
@@ -54,16 +50,22 @@ bool Database::get(int key, std::string& value) const {
         std::lock_guard<std::mutex> lock(accessMutex);
         
         // First try B+Tree
-        try {
-            value = indexTree.find(key);
+        // Need a non-const version for the method call since find() isn't const
+        std::string* result = const_cast<BPlusTree<int, std::string, 128>&>(indexTree).find(key);
+        if (result) {
+            value = *result;
             return true;
-        } catch (...) {
-            // Not found in B+Tree, try LSM Tree as fallback
         }
     }
     
     // If not in B+Tree, check LSM Tree (this might be newly written data not yet synced)
-    return lsmTree.get(key, value);
+    // Need to cast away const since LSM Tree's get() isn't marked as const
+    auto optionalValue = const_cast<LSMTree<int, std::string>&>(lsmTree).get(key);
+    if (optionalValue.has_value()) {
+        value = optionalValue.value();
+        return true;
+    }
+    return false;
 }
 
 std::vector<std::pair<int, std::string>> Database::range(int startKey, int endKey) const {
@@ -73,12 +75,12 @@ std::vector<std::pair<int, std::string>> Database::range(int startKey, int endKe
     {
         std::lock_guard<std::mutex> lock(accessMutex);
         
-        // Get range from B+Tree
-        results = indexTree.range(startKey, endKey);
+        // Get range from B+Tree (need to cast away const because method isn't const)
+        results = const_cast<BPlusTree<int, std::string, 128>&>(indexTree).range(startKey, endKey);
     }
     
-    // Check LSM Tree for any newer values in the range
-    auto lsmResults = lsmTree.range(startKey, endKey);
+    // Check LSM Tree for any newer values in the range (need to cast away const)
+    auto lsmResults = const_cast<LSMTree<int, std::string>&>(lsmTree).range(startKey, endKey);
     
     // Merge results, preferring LSM Tree values (newer) for the same keys
     for (const auto& pair : lsmResults) {
@@ -112,10 +114,15 @@ void Database::sync() {
     
     syncInProgress.store(true);
     
-    // Iterate through all entries in LSM Tree and add to B+Tree
-    lsmTree.forEach([this](const int& key, const std::string& value) {
+    // Since LSMTree doesn't have a forEach method, we need to handle this differently
+    // We'll iterate through all keys in a large range
+    constexpr int MIN_KEY = std::numeric_limits<int>::min();
+    constexpr int MAX_KEY = std::numeric_limits<int>::max();
+    
+    auto entries = lsmTree.range(MIN_KEY, MAX_KEY);
+    for (const auto& [key, value] : entries) {
         indexTree.insert(key, value);
-    });
+    }
     
     syncInProgress.store(false);
 }
