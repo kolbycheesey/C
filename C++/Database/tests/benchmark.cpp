@@ -103,6 +103,9 @@ void runMongoDBBenchmark() {
             int end = start + 999;
             
             using bsoncxx::builder::stream::document;
+            using bsoncxx::builder::stream::open_document;
+            using bsoncxx::builder::stream::close_document;
+            
             auto filter = document{} << "_id" << open_document 
                                      << "$gte" << start 
                                      << "$lte" << end 
@@ -111,7 +114,7 @@ void runMongoDBBenchmark() {
             
             auto cursor = collection.find(filter.view());
             std::vector<bsoncxx::document::value> results;
-            for (auto&& doc : cursor) {
+            for (auto doc : cursor) {
                 results.push_back(bsoncxx::document::value(doc));
             }
         }

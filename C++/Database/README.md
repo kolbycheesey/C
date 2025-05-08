@@ -31,7 +31,51 @@ cd build
 cmake -DBUILD_TESTS=ON -DUSE_MONGODB=ON ..
 cmake --build .
 
-### Build all targets
+### Build with MongoDB Support
+#### Prerequisites
+You need to install the MongoDB C++ Driver before building with MongoDB support:
+
+##### On Windows (CMD Prompt):
+1. Install vcpkg if you don't have it already:
+   ```
+   git clone https://github.com/Microsoft/vcpkg.git
+   cd vcpkg
+   bootstrap-vcpkg.bat
+   vcpkg integrate install
+   ```
+
+2. Install the MongoDB C++ Driver using vcpkg:
+   ```
+   vcpkg install mongo-cxx-driver:x64-windows
+   ```
+
+3. When building the project, specify the vcpkg toolchain file:
+   ```
+   cd build
+   cmake -DBUILD_TESTS=ON -DUSE_MONGODB=ON -DCMAKE_TOOLCHAIN_FILE="C:/actual/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake" -DLOG_LEVEL=WARNING -DLOG_TO_FILE=ON ..
+   cmake --build .
+   ```
+
+##### On Linux (Terminal):
+1. Install the MongoDB C++ Driver dependencies:
+   ```
+   sudo apt-get install libmongoc-dev libbson-dev cmake libssl-dev libsasl2-dev
+   ```
+
+2. Build and install the MongoDB C++ Driver:
+   ```
+   git clone https://github.com/mongodb/mongo-cxx-driver.git --branch releases/stable --depth 1
+   cd mongo-cxx-driver/build
+   cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
+   sudo make -j$(nproc) install
+   ```
+
+3. When building the project:
+   ```
+   cd build
+   cmake -DBUILD_TESTS=ON -DUSE_MONGODB=ON ..
+   cmake --build .
+   ```
 
 ### Build with logging
 #### For debugging with all logs going to console

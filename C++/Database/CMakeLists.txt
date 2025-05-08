@@ -6,7 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Option to enable or disable tests (default: OFF)
 option(BUILD_TESTS "Build the test suite" OFF)
+
+# MongoDB configuration options
 option(USE_MONGODB "Enable MongoDB benchmarks" OFF)
+set(MONGODB_ROOT_DIR "" CACHE PATH "MongoDB C++ Driver installation directory")
 
 # Logging options
 set(LOG_LEVEL "INFO" CACHE STRING "Set the logging level (DEBUG, INFO, WARNING, ERR, NONE)")
@@ -36,13 +39,101 @@ if(WIN32)
 endif()
 
 # Add MongoDB support if enabled
+set(MONGODB_FOUND FALSE)
 if(USE_MONGODB)
-    # Find MongoDB C++ Driver package
-    find_package(mongocxx REQUIRED)
-    find_package(bsoncxx REQUIRED)
+    # Check if we're using vcpkg
+    if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
+        set(USING_VCPKG TRUE)
+        # Extract vcpkg root directory from toolchain file path
+        string(REGEX REPLACE "/scripts/buildsystems/vcpkg.cmake$" "" VCPKG_ROOT "${CMAKE_TOOLCHAIN_FILE}")
+        message(STATUS "Using vcpkg from ${VCPKG_ROOT}")
+        
+        # When using vcpkg, add the share directory to module path for mongocxx config files
+        list(APPEND CMAKE_PREFIX_PATH 
+            "${VCPKG_ROOT}/installed/x64-windows/share"
+            "${VCPKG_ROOT}/installed/x86-windows/share"
+        )
+        
+        # Use CONFIG mode specifically as recommended by vcpkg
+        message(STATUS "Looking for MongoDB C++ driver with vcpkg's CONFIG mode...")
+        find_package(bsoncxx CONFIG QUIET)
+        find_package(mongocxx CONFIG QUIET)
+        
+        if(bsoncxx_FOUND AND mongocxx_FOUND)
+            message(STATUS "Found MongoDB C++ driver via vcpkg")
+            set(MONGODB_FOUND TRUE)
+            
+            # Setup the libraries based on what's available (static or shared)
+            if(TARGET mongo::bsoncxx_static AND TARGET mongo::mongocxx_static)
+                message(STATUS "Using static MongoDB libraries")
+                set(BSONCXX_LIBRARIES mongo::bsoncxx_static)
+                set(MONGOCXX_LIBRARIES mongo::mongocxx_static)
+            else()
+                message(STATUS "Using shared MongoDB libraries")
+                set(BSONCXX_LIBRARIES mongo::bsoncxx_shared)
+                set(MONGOCXX_LIBRARIES mongo::mongocxx_shared)
+            endif()
+            
+            # Add MongoDB-related definitions
+            add_definitions(-DUSE_MONGODB)
+        else()
+            message(WARNING "MongoDB C++ driver not found in vcpkg. Check your installation.")
+            message(STATUS "Trying without vcpkg...")
+        endif()
+    endif()
     
-    # Add MongoDB-related definitions
-    add_definitions(-DUSE_MONGODB)
+    # If not found through vcpkg CONFIG mode, try standard approach
+    if(NOT MONGODB_FOUND)
+        # Set MongoDB search paths based on user input
+        if(MONGODB_ROOT_DIR)
+            list(APPEND CMAKE_PREFIX_PATH "${MONGODB_ROOT_DIR}")
+        endif()
+        
+        # Check common installation directories
+        if(WIN32)
+            list(APPEND CMAKE_PREFIX_PATH 
+                "C:/Program Files/mongo-cxx-driver"
+                "C:/mongo-cxx-driver"
+            )
+        else()
+            list(APPEND CMAKE_PREFIX_PATH 
+                "/usr/local"
+                "/usr/local/mongodb-cxx-driver"
+                "/usr"
+            )
+        endif()
+        
+        # Try to find MongoDB using standard approach
+        find_package(mongocxx QUIET)
+        find_package(bsoncxx QUIET)
+        
+        if(mongocxx_FOUND AND bsoncxx_FOUND)
+            set(MONGODB_FOUND TRUE)
+            message(STATUS "Found MongoDB C++ driver through standard method")
+        endif()
+    endif()
+    
+    # Final check if MongoDB was found through any method
+    if(MONGODB_FOUND)
+        message(STATUS "MongoDB C++ driver found. MongoDB benchmark support enabled.")
+    else()
+        if(DEFINED USING_VCPKG AND USING_VCPKG)
+            message(WARNING "MongoDB C++ driver not found through vcpkg.")
+            message(STATUS "Please make sure you've properly installed it:")
+            message(STATUS "  1. Run: vcpkg install mongo-cxx-driver:x64-windows")
+            message(STATUS "  2. Run: vcpkg integrate install")
+            message(STATUS "  3. Then try building again")
+        else()
+            message(WARNING "MongoDB C++ driver not found. MongoDB benchmarks will be disabled.")
+            message(STATUS "To enable MongoDB support, try one of the following:")
+            message(STATUS "  1. Install the MongoDB C++ driver")
+            message(STATUS "  2. Set MONGODB_ROOT_DIR to your MongoDB installation directory")
+            message(STATUS "  3. Use vcpkg: install mongo-cxx-driver:x64-windows and use the toolchain file")
+        endif()
+        
+        # Disable MongoDB support
+        set(USE_MONGODB OFF)
+    endif()
 endif()
 
 # Configure logging
