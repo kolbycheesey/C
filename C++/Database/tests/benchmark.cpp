@@ -3,6 +3,7 @@
 #include <chrono>
 #include "../src/benchmark/benchmark_framework.h"
 #include "../src/database/database.h"
+#include "../src/utils/logger.h"
 
 // Include MongoDB headers conditionally
 #ifdef USE_MONGODB
@@ -123,6 +124,33 @@ void runMongoDBBenchmark() {
 #endif
 
 int main() {
+    // Initialize the logger with the appropriate LogLevel based on compile-time setting
+    LogLevel runtimeLogLevel;
+    
+    #if LOG_LEVEL == LOG_LEVEL_DEBUG
+        runtimeLogLevel = LogLevel::DEBUG;
+    #elif LOG_LEVEL == LOG_LEVEL_INFO
+        runtimeLogLevel = LogLevel::INFO;
+    #elif LOG_LEVEL == LOG_LEVEL_WARNING
+        runtimeLogLevel = LogLevel::WARNING;
+    #elif LOG_LEVEL == LOG_LEVEL_ERROR
+        runtimeLogLevel = LogLevel::ERR;
+    #else
+        runtimeLogLevel = LogLevel::NONE;
+    #endif
+    
+    #ifdef LOG_TO_FILE
+        #ifdef LOG_FILE_PATH
+            Logger::getInstance().init(LOG_FILE_PATH, runtimeLogLevel, false);
+        #else
+            Logger::getInstance().init("benchmark.log", runtimeLogLevel, false);
+        #endif
+    #else
+        Logger::getInstance().init("", runtimeLogLevel, true);
+    #endif
+    
+    LOG_INFO("Starting database benchmark tests...");
+    
     std::cout << "Running database benchmarks..." << std::endl;
     
     // Run custom database benchmarks
@@ -132,10 +160,15 @@ int main() {
 #ifdef USE_MONGODB
     // Run MongoDB benchmarks if enabled
     std::cout << "\nRunning MongoDB benchmarks..." << std::endl;
-    runMongoDBBenchmark();
-    std::cout << "MongoDB benchmarks completed." << std::endl;
+    try {
+        runMongoDBBenchmark();
+    } catch (const std::exception& e) {
+        LOG_ERROR("MongoDB benchmark failed: " + std::string(e.what()));
+        std::cerr << "MongoDB benchmark failed: " << e.what() << std::endl;
+    }
 #endif
     
+    LOG_INFO("All benchmarks completed successfully!");
     std::cout << "All benchmarks completed." << std::endl;
     std::cout << "High-Performance Database Engine Stopped." << std::endl;
     return 0;

@@ -1,5 +1,5 @@
 #include "mmap_manager.h"
-#include <iostream>
+#include "../utils/logger.h"
 #include <system_error>
 
 MMapManager::~MMapManager() {
@@ -28,8 +28,7 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
     );
 
     if (fileHandle == INVALID_HANDLE_VALUE) {
-        std::cerr << "Failed to open file: " << path << " - Error code: " 
-                  << GetLastError() << std::endl;
+        LOG_ERROR("Failed to open file: " + path + " - Error code: " + std::to_string(GetLastError()));
         return nullptr;
     }
 
@@ -40,8 +39,7 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
         
         if (!SetFilePointerEx(fileHandle, fileSize, NULL, FILE_BEGIN) ||
             !SetEndOfFile(fileHandle)) {
-            std::cerr << "Failed to resize file: " << path << " - Error code: " 
-                      << GetLastError() << std::endl;
+            LOG_ERROR("Failed to resize file: " + path + " - Error code: " + std::to_string(GetLastError()));
             CloseHandle(fileHandle);
             return nullptr;
         }
@@ -59,8 +57,7 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
     );
 
     if (mappingHandle == NULL) {
-        std::cerr << "Failed to create file mapping: " << path << " - Error code: " 
-                  << GetLastError() << std::endl;
+        LOG_ERROR("Failed to create file mapping: " + path + " - Error code: " + std::to_string(GetLastError()));
         CloseHandle(fileHandle);
         return nullptr;
     }
@@ -76,8 +73,7 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
     );
 
     if (data == NULL) {
-        std::cerr << "Failed to map view of file: " << path << " - Error code: " 
-                  << GetLastError() << std::endl;
+        LOG_ERROR("Failed to map view of file: " + path + " - Error code: " + std::to_string(GetLastError()));
         CloseHandle(mappingHandle);
         CloseHandle(fileHandle);
         return nullptr;
@@ -85,6 +81,7 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
 
     // Store mapping info
     mappings[path] = {fileHandle, mappingHandle, data, size, readOnly};
+    LOG_DEBUG("Successfully mapped file: " + path + " (" + std::to_string(size) + " bytes, " + (readOnly ? "read-only" : "read-write") + ")");
 
 #else
     // POSIX implementation
@@ -95,16 +92,14 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
     
     int fd = open(path.c_str(), flags, 0644);
     if (fd == -1) {
-        std::cerr << "Failed to open file: " << path << " - " 
-                  << std::system_category().message(errno) << std::endl;
+        LOG_ERROR("Failed to open file: " + path + " - " + std::system_category().message(errno));
         return nullptr;
     }
     
     // Ensure the file is the right size
     if (create) {
         if (ftruncate(fd, size) == -1) {
-            std::cerr << "Failed to resize file: " << path << " - " 
-                      << std::system_category().message(errno) << std::endl;
+            LOG_ERROR("Failed to resize file: " + path + " - " + std::system_category().message(errno));
             close(fd);
             return nullptr;
         }
@@ -114,14 +109,14 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
     int prot = readOnly ? PROT_READ : (PROT_READ | PROT_WRITE);
     void* data = mmap(NULL, size, prot, MAP_SHARED, fd, 0);
     if (data == MAP_FAILED) {
-        std::cerr << "Failed to memory map file: " << path << " - " 
-                  << std::system_category().message(errno) << std::endl;
+        LOG_ERROR("Failed to memory map file: " + path + " - " + std::system_category().message(errno));
         close(fd);
         return nullptr;
     }
     
     // Store mapping info
     mappings[path] = {fd, data, size, readOnly};
+    LOG_DEBUG("Successfully mapped file: " + path + " (" + std::to_string(size) + " bytes, " + (readOnly ? "read-only" : "read-write") + ")");
     
     // Advise the kernel that we'll access this memory sequentially
     madvise(data, size, MADV_SEQUENTIAL);
@@ -133,6 +128,7 @@ void* MMapManager::mapFile(const std::string& path, size_t size, bool readOnly, 
 bool MMapManager::unmapFile(const std::string& path) {
     auto it = mappings.find(path);
     if (it == mappings.end()) {
+        LOG_WARNING("Attempted to unmap non-existent file: " + path);
         return false;
     }
     
@@ -141,8 +137,7 @@ bool MMapManager::unmapFile(const std::string& path) {
 #ifdef _WIN32
     // Windows implementation
     if (!UnmapViewOfFile(mapping.data)) {
-        std::cerr << "Failed to unmap file: " << path << " - Error code: " 
-                  << GetLastError() << std::endl;
+        LOG_ERROR("Failed to unmap file: " + path + " - Error code: " + std::to_string(GetLastError()));
         return false;
     }
     
@@ -151,8 +146,7 @@ bool MMapManager::unmapFile(const std::string& path) {
 #else
     // POSIX implementation
     if (munmap(mapping.data, mapping.size) != 0) {
-        std::cerr << "Failed to unmap file: " << path << " - " 
-                  << std::system_category().message(errno) << std::endl;
+        LOG_ERROR("Failed to unmap file: " + path + " - " + std::system_category().message(errno));
         return false;
     }
     
@@ -160,12 +154,14 @@ bool MMapManager::unmapFile(const std::string& path) {
 #endif
     
     mappings.erase(it);
+    LOG_DEBUG("Successfully unmapped file: " + path);
     return true;
 }
 
 void* MMapManager::getMapping(const std::string& path) {
     auto it = mappings.find(path);
     if (it == mappings.end()) {
+        LOG_DEBUG("Attempted to get mapping for non-existent file: " + path);
         return nullptr;
     }
     return it->second.data;
@@ -174,6 +170,7 @@ void* MMapManager::getMapping(const std::string& path) {
 bool MMapManager::syncFile(const std::string& path) {
     auto it = mappings.find(path);
     if (it == mappings.end() || it->second.readOnly) {
+        LOG_WARNING("Cannot sync file (not mapped or read-only): " + path);
         return false;
     }
     
@@ -181,24 +178,23 @@ bool MMapManager::syncFile(const std::string& path) {
     // Windows implementation
     if (!FlushViewOfFile(it->second.data, it->second.size) || 
         !FlushFileBuffers(it->second.fileHandle)) {
-        std::cerr << "Failed to sync file: " << path << " - Error code: " 
-                  << GetLastError() << std::endl;
+        LOG_ERROR("Failed to sync file: " + path + " - Error code: " + std::to_string(GetLastError()));
         return false;
     }
 #else
     // POSIX implementation
     if (msync(it->second.data, it->second.size, MS_SYNC) != 0) {
-        std::cerr << "Failed to sync file: " << path << " - " 
-                  << std::system_category().message(errno) << std::endl;
+        LOG_ERROR("Failed to sync file: " + path + " - " + std::system_category().message(errno));
         return false;
     }
 #endif
     
+    LOG_DEBUG("Successfully synced file: " + path);
     return true;
 }
 
 void MMapManager::closeAll() {
-    std::cout << "MMapManager: Closing all memory mappings (" << mappings.size() << " files)..." << std::endl;
+    LOG_INFO("MMapManager: Closing all memory mappings (" + std::to_string(mappings.size()) + " files)...");
     
     // Make a copy of the keys to avoid iterator invalidation during unmapFile calls
     std::vector<std::string> paths;
@@ -210,12 +206,12 @@ void MMapManager::closeAll() {
     
     // Unmap all files
     for (const auto& path : paths) {
-        std::cout << "  Unmapping file: " << path << std::endl;
+        LOG_DEBUG("Unmapping file: " + path);
         unmapFile(path);
     }
     
     // Clear any remaining mappings (should be empty already)
     mappings.clear();
     
-    std::cout << "All memory mappings closed." << std::endl;
+    LOG_INFO("All memory mappings closed.");
 }

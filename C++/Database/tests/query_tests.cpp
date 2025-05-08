@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include "../src/query/query_processor.h"
+#include "../src/utils/logger.h"
 
 // Simple test case structure
 struct TestCase {
@@ -17,10 +18,10 @@ bool test_query_parsing() {
         std::string queryStr = "SELECT * FROM test_table WHERE id = 1";
         
         bool result = processor.parseQuery(queryStr);
-        std::cout << "Query parsing " << (result ? "successful" : "failed") << std::endl;
+        LOG_INFO("Query parsing " + std::string(result ? "successful" : "failed"));
         return result;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during query parsing: " << e.what() << std::endl;
+        LOG_ERROR("Exception during query parsing: " + std::string(e.what()));
         return false;
     }
 }
@@ -32,19 +33,45 @@ bool test_query_execution() {
         std::vector<std::string> results;
         
         bool result = processor.executeQuery(queryStr, results);
-        std::cout << "Query execution " << (result ? "successful" : "failed") << std::endl;
+        LOG_INFO("Query execution " + std::string(result ? "successful" : "failed"));
         if (result) {
-            std::cout << "Retrieved " << results.size() << " results" << std::endl;
+            LOG_DEBUG("Retrieved " + std::to_string(results.size()) + " results");
         }
         return result;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during query execution: " << e.what() << std::endl;
+        LOG_ERROR("Exception during query execution: " + std::string(e.what()));
         return false;
     }
 }
 
 // Main function - entry point for the test executable
 int main() {
+    // Initialize the logger with the appropriate LogLevel based on compile-time setting
+    LogLevel runtimeLogLevel;
+    
+    #if LOG_LEVEL == LOG_LEVEL_DEBUG
+        runtimeLogLevel = LogLevel::DEBUG;
+    #elif LOG_LEVEL == LOG_LEVEL_INFO
+        runtimeLogLevel = LogLevel::INFO;
+    #elif LOG_LEVEL == LOG_LEVEL_WARNING
+        runtimeLogLevel = LogLevel::WARNING;
+    #elif LOG_LEVEL == LOG_LEVEL_ERROR
+        runtimeLogLevel = LogLevel::ERR;
+    #else
+        runtimeLogLevel = LogLevel::NONE;
+    #endif
+    
+    #ifdef LOG_TO_FILE
+        #ifdef LOG_FILE_PATH
+            Logger::getInstance().init(LOG_FILE_PATH, runtimeLogLevel, false);
+        #else
+            Logger::getInstance().init("query_tests.log", runtimeLogLevel, false);
+        #endif
+    #else
+        Logger::getInstance().init("", runtimeLogLevel, true);
+    #endif
+    
+    LOG_INFO("Running query tests...");
     std::cout << "Running query tests..." << std::endl;
 
     // Define test cases
@@ -56,6 +83,7 @@ int main() {
     // Run tests and collect results
     int passed = 0;
     for (const auto& test : testCases) {
+        LOG_INFO("Running test: " + test.name);
         std::cout << "Running test: " << test.name << "... ";
         if (test.testFunction()) {
             std::cout << "PASSED" << std::endl;
@@ -67,6 +95,8 @@ int main() {
 
     std::cout << "Test summary: " << passed << " / " << testCases.size() 
               << " tests passed." << std::endl;
+    LOG_INFO("Test summary: " + std::to_string(passed) + " / " + 
+             std::to_string(testCases.size()) + " tests passed.");
 
     return (passed == testCases.size()) ? 0 : 1;
 }

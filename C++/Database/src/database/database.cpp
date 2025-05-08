@@ -2,6 +2,7 @@
 #include "../storage/mmap_manager.h"
 #include "../storage/storage_engine.h"
 #include "../query/query_processor.h"
+#include "../utils/logger.h"
 #include <chrono>
 #include <limits>
 
@@ -12,8 +13,8 @@ Database::Database(const std::string& dbName)
       syncInProgress(false),
       stopSync(false) {
     
-    std::cout << "Initializing high-performance database: " << name << std::endl;
-    std::cout << "Using hybrid storage approach: LSM Tree for writes, B+Tree for reads" << std::endl;
+    LOG_INFO("Initializing high-performance database: " + name);
+    LOG_INFO("Using hybrid storage approach: LSM Tree for writes, B+Tree for reads");
     
     memoryManager = std::make_unique<MemoryManager>();
     storage = std::make_unique<StorageEngine>("./data");
@@ -24,36 +25,36 @@ Database::Database(const std::string& dbName)
 }
 
 Database::~Database() {
-    std::cout << "Database destructor called for " << name << std::endl;
+    LOG_INFO("Database destructor called for " + name);
     
     // Signal the sync thread to stop
     stopSync.store(true);
     
     // Wait for sync thread to finish
     if (syncThread.joinable()) {
-        std::cout << "Joining sync thread..." << std::endl;
+        LOG_DEBUG("Joining sync thread...");
         syncThread.join();
-        std::cout << "Sync thread joined successfully" << std::endl;
+        LOG_DEBUG("Sync thread joined successfully");
     }
     
-    std::cout << "Destroying components..." << std::endl;
+    LOG_DEBUG("Destroying components...");
     
     // Explicitly destroy components in a controlled order
     // This helps identify which component might be causing the hang
     
-    std::cout << "Clearing LSM tree..." << std::endl;
+    LOG_DEBUG("Clearing LSM tree...");
     lsmTree.clear(); // Add a clear method to your LSM tree if it doesn't exist
 
-    std::cout << "Destroying query processor..." << std::endl;
+    LOG_DEBUG("Destroying query processor...");
     queryProcessor.reset();
     
-    std::cout << "Destroying memory manager..." << std::endl;
+    LOG_DEBUG("Destroying memory manager...");
     memoryManager.reset();
     
-    std::cout << "Destroying storage engine..." << std::endl;
+    LOG_DEBUG("Destroying storage engine...");
     storage.reset();
     
-    std::cout << "Database " << name << " shutdown completed." << std::endl;
+    LOG_INFO("Database " + name + " shutdown completed.");
 }
 
 bool Database::put(int key, const std::string& value) {
@@ -174,5 +175,5 @@ void Database::syncDataStructures() {
         sync();
     }
     
-    std::cout << "Sync thread terminated." << std::endl;
+    LOG_DEBUG("Sync thread terminated.");
 }

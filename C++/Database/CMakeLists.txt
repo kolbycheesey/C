@@ -8,6 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(BUILD_TESTS "Build the test suite" OFF)
 option(USE_MONGODB "Enable MongoDB benchmarks" OFF)
 
+# Logging options
+set(LOG_LEVEL "INFO" CACHE STRING "Set the logging level (DEBUG, INFO, WARNING, ERR, NONE)")
+set_property(CACHE LOG_LEVEL PROPERTY STRINGS DEBUG INFO WARNING ERR NONE)
+option(LOG_TO_FILE "Write logs to file instead of console" OFF)
+set(LOG_FILE_PATH "" CACHE STRING "Path to the log file (empty for default)")
+
 # Define source directories
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
@@ -37,6 +43,26 @@ if(USE_MONGODB)
     
     # Add MongoDB-related definitions
     add_definitions(-DUSE_MONGODB)
+endif()
+
+# Configure logging
+if(LOG_LEVEL STREQUAL "DEBUG")
+    add_definitions(-DLOG_LEVEL=LOG_LEVEL_DEBUG)
+elseif(LOG_LEVEL STREQUAL "INFO")
+    add_definitions(-DLOG_LEVEL=LOG_LEVEL_INFO)
+elseif(LOG_LEVEL STREQUAL "WARNING")
+    add_definitions(-DLOG_LEVEL=LOG_LEVEL_WARNING)
+elseif(LOG_LEVEL STREQUAL "ERR")
+    add_definitions(-DLOG_LEVEL=LOG_LEVEL_ERROR)
+elseif(LOG_LEVEL STREQUAL "NONE")
+    add_definitions(-DLOG_LEVEL=LOG_LEVEL_NONE)
+endif()
+
+if(LOG_TO_FILE)
+    add_definitions(-DLOG_TO_FILE)
+    if(NOT "${LOG_FILE_PATH}" STREQUAL "")
+        add_definitions(-DLOG_FILE_PATH="${LOG_FILE_PATH}")
+    endif()
 endif()
 
 # Collect all the source files for the main application (excluding main.cpp)

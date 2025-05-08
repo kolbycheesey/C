@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include "../src/database/database.h"
+#include "../src/utils/logger.h"
 
 // Simple test case structure
 struct TestCase {
@@ -14,10 +15,10 @@ struct TestCase {
 bool test_database_creation() {
     try {
         Database db("test_db");
-        std::cout << "Created database successfully" << std::endl;
+        LOG_INFO("Created database successfully");
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Failed to create database: " << e.what() << std::endl;
+        LOG_ERROR("Failed to create database: " + std::string(e.what()));
         return false;
     }
 }
@@ -30,33 +31,59 @@ bool test_database_put_get() {
         int key = 42;
         std::string value = "test_value";
         if (!db.put(key, value)) {
-            std::cerr << "Failed to put data into database" << std::endl;
+            LOG_ERROR("Failed to put data into database");
             return false;
         }
         
         // Test get operation
         std::string retrievedValue;
         if (!db.get(key, retrievedValue)) {
-            std::cerr << "Failed to get data from database" << std::endl;
+            LOG_ERROR("Failed to get data from database");
             return false;
         }
         
         if (retrievedValue != value) {
-            std::cerr << "Retrieved value doesn't match: expected '" 
-                      << value << "', got '" << retrievedValue << "'" << std::endl;
+            LOG_ERROR("Retrieved value doesn't match: expected '" + 
+                     value + "', got '" + retrievedValue + "'");
             return false;
         }
         
-        std::cout << "Put/Get operations successful" << std::endl;
+        LOG_INFO("Put/Get operations successful");
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during database operations: " << e.what() << std::endl;
+        LOG_ERROR("Exception during database operations: " + std::string(e.what()));
         return false;
     }
 }
 
 // Main function - entry point for the test executable
 int main() {
+    // Initialize the logger with the appropriate LogLevel based on compile-time setting
+    LogLevel runtimeLogLevel;
+    
+    #if LOG_LEVEL == LOG_LEVEL_DEBUG
+        runtimeLogLevel = LogLevel::DEBUG;
+    #elif LOG_LEVEL == LOG_LEVEL_INFO
+        runtimeLogLevel = LogLevel::INFO;
+    #elif LOG_LEVEL == LOG_LEVEL_WARNING
+        runtimeLogLevel = LogLevel::WARNING;
+    #elif LOG_LEVEL == LOG_LEVEL_ERROR
+        runtimeLogLevel = LogLevel::ERR;
+    #else
+        runtimeLogLevel = LogLevel::NONE;
+    #endif
+    
+    #ifdef LOG_TO_FILE
+        #ifdef LOG_FILE_PATH
+            Logger::getInstance().init(LOG_FILE_PATH, runtimeLogLevel, false);
+        #else
+            Logger::getInstance().init("database_tests.log", runtimeLogLevel, false);
+        #endif
+    #else
+        Logger::getInstance().init("", runtimeLogLevel, true);
+    #endif
+    
+    LOG_INFO("Running database tests...");
     std::cout << "Running database tests..." << std::endl;
 
     // Define test cases
@@ -68,6 +95,7 @@ int main() {
     // Run tests and collect results
     int passed = 0;
     for (const auto& test : testCases) {
+        LOG_INFO("Running test: " + test.name);
         std::cout << "Running test: " << test.name << "... ";
         if (test.testFunction()) {
             std::cout << "PASSED" << std::endl;
@@ -79,6 +107,8 @@ int main() {
 
     std::cout << "Test summary: " << passed << " / " << testCases.size() 
               << " tests passed." << std::endl;
+    LOG_INFO("Test summary: " + std::to_string(passed) + " / " + 
+             std::to_string(testCases.size()) + " tests passed.");
 
     return (passed == testCases.size()) ? 0 : 1;
 }

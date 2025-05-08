@@ -1,4 +1,6 @@
 #include "benchmark_framework.h"
+#include "../utils/logger.h"
+#include <sstream> // Added for std::stringstream
 
 // Print all benchmark results
 void BenchmarkFramework::printResults() const {
@@ -16,5 +18,15 @@ void BenchmarkFramework::printResults() const {
     }
     
     std::cout << "=====================================" << std::endl;
+
+    // Also log this information at INFO level for file logging
+    LOG_INFO("Benchmark Results Summary");
+    for (const auto& result : results) {
+        std::stringstream ss;
+        ss << result.name << ": " 
+           << result.elapsedMs << " ms, "
+           << result.operationsPerSecond << " ops/sec";
+        LOG_INFO(ss.str());
+    }
 
 } // BenchmarkFramework::printResults

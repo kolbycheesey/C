@@ -33,6 +33,13 @@ cmake --build .
 
 ### Build all targets
 
+### Build with logging
+#### For debugging with all logs going to console
+cmake -DLOG_LEVEL=DEBUG ..
+
+#### For production with only important messages and logs to file
+cmake -DLOG_LEVEL=WARNING -DLOG_TO_FILE=ON ..
+
 # Clean Instructions
 ### From base project directory
 cd build
