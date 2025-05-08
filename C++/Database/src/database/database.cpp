@@ -24,13 +24,36 @@ Database::Database(const std::string& dbName)
 }
 
 Database::~Database() {
+    std::cout << "Database destructor called for " << name << std::endl;
+    
     // Signal the sync thread to stop
     stopSync.store(true);
     
     // Wait for sync thread to finish
     if (syncThread.joinable()) {
+        std::cout << "Joining sync thread..." << std::endl;
         syncThread.join();
+        std::cout << "Sync thread joined successfully" << std::endl;
     }
+    
+    std::cout << "Destroying components..." << std::endl;
+    
+    // Explicitly destroy components in a controlled order
+    // This helps identify which component might be causing the hang
+    
+    std::cout << "Clearing LSM tree..." << std::endl;
+    lsmTree.clear(); // Add a clear method to your LSM tree if it doesn't exist
+
+    std::cout << "Destroying query processor..." << std::endl;
+    queryProcessor.reset();
+    
+    std::cout << "Destroying memory manager..." << std::endl;
+    memoryManager.reset();
+    
+    std::cout << "Destroying storage engine..." << std::endl;
+    storage.reset();
+    
+    std::cout << "Database " << name << " shutdown completed." << std::endl;
 }
 
 bool Database::put(int key, const std::string& value) {
@@ -131,8 +154,16 @@ void Database::syncDataStructures() {
     using namespace std::chrono_literals;
     
     while (!stopSync.load()) {
-        // Sync every 5 seconds
-        std::this_thread::sleep_for(5s);
+        // Sleep in shorter intervals (100ms) and check stopSync flag frequently
+        // This allows faster shutdown response
+        for (int i = 0; i < 50 && !stopSync.load(); i++) {
+            std::this_thread::sleep_for(100ms);
+        }
+        
+        // If stop was requested during the sleep, exit immediately
+        if (stopSync.load()) {
+            break;
+        }
         
         // Skip if a sync is already in progress
         if (syncInProgress.load()) {
@@ -142,44 +173,6 @@ void Database::syncDataStructures() {
         // Perform the sync
         sync();
     }
-}
-
-void Database::benchmark() {
-    const int RECORD_COUNT = 1000000;
     
-    std::cout << "Running hybrid storage benchmark (" << RECORD_COUNT << " records)..." << std::endl;
-    
-    // Hybrid write benchmark (LSM Tree only)
-    benchmarker.runBenchmark("Hybrid Write (LSM Tree)", [this, RECORD_COUNT]() {
-        for (int i = 0; i < RECORD_COUNT; i++) {
-            this->put(i, "value-" + std::to_string(i));
-        }
-    }, RECORD_COUNT);
-    
-    // Sync data from LSM Tree to B+Tree
-    std::cout << "Syncing data from LSM Tree to B+Tree..." << std::endl;
-    sync();
-    
-    // Hybrid read benchmark (B+Tree with LSM fallback)
-    benchmarker.runBenchmark("Hybrid Read", [this, RECORD_COUNT]() {
-        // Random access pattern
-        for (int i = 0; i < 100000; i++) {
-            int key = rand() % RECORD_COUNT;
-            std::string value;
-            this->get(key, value);
-        }
-    }, 100000);
-    
-    // Hybrid range query benchmark
-    benchmarker.runBenchmark("Hybrid Range Query", [this]() {
-        // Perform 100 range queries
-        for (int i = 0; i < 100; i++) {
-            int start = i * 1000;
-            int end = start + 999;
-            auto results = this->range(start, end);
-        }
-    }, 100);
-    
-    // Print all benchmark results
-    benchmarker.printResults();
+    std::cout << "Sync thread terminated." << std::endl;
 }

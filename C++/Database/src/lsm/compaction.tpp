@@ -356,4 +356,38 @@ void CompactionManager<Key, Value>::waitForCompactions() {
     });
 }
 
+template <typename Key, typename Value>
+void CompactionManager<Key, Value>::shutdown() {
+    std::cout << "Shutting down CompactionManager..." << std::endl;
+    
+    // Stop compaction thread
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        stopRequested = true;
+        compactionQueue = {}; // Clear the queue
+        compactionCV.notify_all();
+    }
+    
+    // Wait for compaction thread to finish
+    if (compactionThread.joinable()) {
+        std::cout << "  Joining compaction thread..." << std::endl;
+        compactionThread.join();
+        std::cout << "  Compaction thread joined." << std::endl;
+    }
+    
+    // Clean up all SSTables
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        std::cout << "  Clearing " << levels.size() << " levels of SSTables..." << std::endl;
+        
+        for (size_t level = 0; level < levels.size(); ++level) {
+            size_t tableCount = levels[level].size();
+            std::cout << "  Level " << level << ": releasing " << tableCount << " tables..." << std::endl;
+            levels[level].clear();
+        }
+    }
+    
+    std::cout << "CompactionManager shutdown complete." << std::endl;
+}
+
 #endif // COMPACTION_TPP

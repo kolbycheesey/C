@@ -19,11 +19,19 @@ Add Transaction Support
 Implement MVCC (Multi-Version Concurrency Control) for isolation
 
 # Build Instructions
-### From base project directory
+## From base project directory
+### Build base program
 mkdir build (if it doesn't exist)
 cd build
 cmake ..
 cmake --build .
+
+### Build with Tests
+cd build
+cmake -DBUILD_TESTS=ON -DUSE_MONGODB=ON ..
+cmake --build .
+
+### Build all targets
 
 # Clean Instructions
 ### From base project directory

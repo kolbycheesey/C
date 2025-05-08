@@ -90,6 +90,11 @@ public:
      * Apply a function to each entry in the memtable
      */
     void forEach(const std::function<void(const Key&, const Value&)>& func) const;
+    
+    /**
+     * Clear all entries from the memtable
+     */
+    void clear();
 };
 
 #include "memtable.tpp"

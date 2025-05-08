@@ -1,99 +1,142 @@
-#ifndef BENCHMARK_FRAMEWORK_H
-#define BENCHMARK_FRAMEWORK_H
-
 #include <iostream>
 #include <string>
 #include <chrono>
-#include <functional>
-#include <vector>
-#include <numeric>
-#include <algorithm>
+#include "../src/benchmark/benchmark_framework.h"
+#include "../src/database/database.h"
 
-class BenchmarkFramework {
-private:
-    struct BenchmarkResult {
-        std::string name;
-        double elapsedMs;
-        double operationsPerSecond;
-        size_t iterations;
-        size_t operations;
-    };
+// Include MongoDB headers conditionally
+#ifdef USE_MONGODB
+#include <mongocxx/client.hpp>
+#include <mongocxx/instance.hpp>
+#include <mongocxx/uri.hpp>
+#include <bsoncxx/json.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#endif
+
+// Main benchmark function that was previously inside Database class
+void runDatabaseBenchmark() {
+    Database db("HighPerformanceDB");
+    BenchmarkFramework benchmarker;
+    const int RECORD_COUNT = 1000000;
     
-    std::vector<BenchmarkResult> results;
+    std::cout << "Running hybrid storage benchmark (" << RECORD_COUNT << " records)..." << std::endl;
     
-public:
-    // Run a single benchmark
-    template<typename Func>
-    void runBenchmark(const std::string& name, Func benchmarkFunc, size_t operations, size_t iterations = 5) {
-        std::vector<double> durations;
-        durations.reserve(iterations);
-        
-        std::cout << "Running benchmark: " << name << std::endl;
-        
-        // Warm-up run
-        benchmarkFunc();
-        
-        // Timed runs
-        for (size_t i = 0; i < iterations; ++i) {
-            auto startTime = std::chrono::high_resolution_clock::now();
-            
-            benchmarkFunc();
-            
-            auto endTime = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000.0;
-            durations.push_back(duration);
-            
-            std::cout << "  - Run " << (i + 1) << ": " << duration << " ms" << std::endl;
+    // Hybrid write benchmark (LSM Tree only)
+    benchmarker.runBenchmark("Hybrid Write (LSM Tree)", [&db, RECORD_COUNT]() {
+        for (int i = 0; i < RECORD_COUNT; i++) {
+            db.put(i, "value-" + std::to_string(i));
         }
-        
-        // Calculate statistics
-        double totalMs = std::accumulate(durations.begin(), durations.end(), 0.0);
-        double averageMs = totalMs / iterations;
-        double ops = operations * 1000.0 / averageMs;
-        
-        // Sort durations to find median
-        std::sort(durations.begin(), durations.end());
-        double medianMs = durations[iterations / 2];
-        
-        std::cout << "  Summary:" << std::endl;
-        std::cout << "  - Average: " << averageMs << " ms" << std::endl;
-        std::cout << "  - Median: " << medianMs << " ms" << std::endl;
-        std::cout << "  - Operations/sec: " << ops << std::endl;
-        std::cout << std::endl;
-        
-        // Store result
-        results.push_back({name, averageMs, ops, iterations, operations});
-    }
+    }, RECORD_COUNT);
     
-    // Compare multiple implementations
-    template<typename... Args>
-    void compareBenchmarks(const std::string& benchmarkName, size_t operations, size_t iterations, Args... benchmarkFuncs) {
-        std::cout << "===== " << benchmarkName << " Comparison =====" << std::endl;
-        
-        int i = 0;
-        (runBenchmark(benchmarkName + " Implementation " + std::to_string(++i), 
-                     benchmarkFuncs, operations, iterations), ...);
-                     
-        std::cout << "===== End " << benchmarkName << " Comparison =====" << std::endl << std::endl;
-    }
+    // Sync data from LSM Tree to B+Tree
+    std::cout << "Syncing data from LSM Tree to B+Tree..." << std::endl;
+    db.sync();
+    
+    // Hybrid read benchmark (B+Tree with LSM fallback)
+    benchmarker.runBenchmark("Hybrid Read", [&db, RECORD_COUNT]() {
+        // Random access pattern
+        for (int i = 0; i < 100000; i++) {
+            int key = rand() % RECORD_COUNT;
+            std::string value;
+            db.get(key, value);
+        }
+    }, 100000);
+    
+    // Hybrid range query benchmark
+    benchmarker.runBenchmark("Hybrid Range Query", [&db]() {
+        // Perform 100 range queries
+        for (int i = 0; i < 100; i++) {
+            int start = i * 1000;
+            int end = start + 999;
+            auto results = db.range(start, end);
+        }
+    }, 100);
     
     // Print all benchmark results
-    void printResults() const {
-        std::cout << "===== Benchmark Results Summary =====" << std::endl;
-        std::cout << std::left;
-        std::cout << std::setw(30) << "Benchmark" << " | ";
-        std::cout << std::setw(15) << "Avg Time (ms)" << " | ";
-        std::cout << std::setw(15) << "Ops/sec" << std::endl;
-        std::cout << std::string(70, '-') << std::endl;
-        
-        for (const auto& result : results) {
-            std::cout << std::setw(30) << result.name << " | ";
-            std::cout << std::setw(15) << result.elapsedMs << " | ";
-            std::cout << std::setw(15) << result.operationsPerSecond << std::endl;
-        }
-        
-        std::cout << "=====================================" << std::endl;
-    }
-};
+    benchmarker.printResults();
+    std::cout << "Benchmark function completed, returning to main..." << std::endl;
+}
 
-#endif // BENCHMARK_FRAMEWORK_H
+#ifdef USE_MONGODB
+// MongoDB benchmarks that mirror the custom database benchmarks
+void runMongoDBBenchmark() {
+    BenchmarkFramework benchmarker;
+    const int RECORD_COUNT = 1000000;
+    
+    std::cout << "Running MongoDB benchmark (" << RECORD_COUNT << " records)..." << std::endl;
+    
+    // Initialize MongoDB
+    mongocxx::instance instance{}; // Required for driver initialization
+    mongocxx::uri uri("mongodb://localhost:27017");
+    mongocxx::client client(uri);
+    
+    auto db = client["benchmark_db"];
+    auto collection = db["benchmark_collection"];
+    
+    // Clean up any existing data
+    collection.drop();
+    
+    // MongoDB write benchmark
+    benchmarker.runBenchmark("MongoDB Write", [&collection, RECORD_COUNT]() {
+        for (int i = 0; i < RECORD_COUNT; i++) {
+            using bsoncxx::builder::stream::document;
+            auto doc = document{} << "_id" << i << "value" << ("value-" + std::to_string(i)) << bsoncxx::builder::stream::finalize;
+            collection.insert_one(doc.view());
+        }
+    }, RECORD_COUNT);
+    
+    // MongoDB read benchmark (random access pattern)
+    benchmarker.runBenchmark("MongoDB Read", [&collection, RECORD_COUNT]() {
+        for (int i = 0; i < 100000; i++) {
+            int key = rand() % RECORD_COUNT;
+            using bsoncxx::builder::stream::document;
+            auto doc = document{} << "_id" << key << bsoncxx::builder::stream::finalize;
+            auto result = collection.find_one(doc.view());
+        }
+    }, 100000);
+    
+    // MongoDB range query benchmark
+    benchmarker.runBenchmark("MongoDB Range Query", [&collection]() {
+        for (int i = 0; i < 100; i++) {
+            int start = i * 1000;
+            int end = start + 999;
+            
+            using bsoncxx::builder::stream::document;
+            auto filter = document{} << "_id" << open_document 
+                                     << "$gte" << start 
+                                     << "$lte" << end 
+                                     << close_document 
+                                     << bsoncxx::builder::stream::finalize;
+            
+            auto cursor = collection.find(filter.view());
+            std::vector<bsoncxx::document::value> results;
+            for (auto&& doc : cursor) {
+                results.push_back(bsoncxx::document::value(doc));
+            }
+        }
+    }, 100);
+    
+    // Print all benchmark results
+    benchmarker.printResults();
+    std::cout << "MongoDB benchmark completed, returning to main..." << std::endl;
+}
+#endif
+
+int main() {
+    std::cout << "Running database benchmarks..." << std::endl;
+    
+    // Run custom database benchmarks
+    runDatabaseBenchmark();
+    std::cout << "Custom database benchmarks completed." << std::endl;
+    
+#ifdef USE_MONGODB
+    // Run MongoDB benchmarks if enabled
+    std::cout << "\nRunning MongoDB benchmarks..." << std::endl;
+    runMongoDBBenchmark();
+    std::cout << "MongoDB benchmarks completed." << std::endl;
+#endif
+    
+    std::cout << "All benchmarks completed." << std::endl;
+    std::cout << "High-Performance Database Engine Stopped." << std::endl;
+    return 0;
+}

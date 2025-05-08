@@ -37,6 +37,9 @@ public:
     bool unmapFile(const std::string& path);
     void* getMapping(const std::string& path);
     bool syncFile(const std::string& path);
+    
+    // Close all open memory mappings
+    void closeAll();
 };
 
 #endif // MMAP_MANAGER_H

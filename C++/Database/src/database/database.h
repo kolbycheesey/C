@@ -7,7 +7,6 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
-#include "../benchmark/benchmark_framework.h"
 #include "../index/bplus_tree.h"
 #include "../lsm/lsm_tree.h"
 #include "../query/query_processor.h"
@@ -20,7 +19,6 @@ private:
     std::unique_ptr<MemoryManager> memoryManager;
     std::unique_ptr<QueryProcessor> queryProcessor;
     std::string name;
-    BenchmarkFramework benchmarker;
     
     // B+ Tree index for read-optimized access
     BPlusTree<int, std::string, 128> indexTree;
@@ -53,8 +51,6 @@ public:
     
     // Force sync between data structures
     void sync();
-    
-    void benchmark();
 };
 
 #endif // DATABASE_H

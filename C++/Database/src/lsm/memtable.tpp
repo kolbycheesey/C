@@ -122,4 +122,11 @@ void MemTable<Key, Value>::forEach(
     }
 }
 
+template <typename Key, typename Value>
+void MemTable<Key, Value>::clear() {
+    std::lock_guard<std::mutex> lock(mutex);
+    data.clear();
+    memoryUsage = 0;
+}
+
 #endif // MEMTABLE_TPP

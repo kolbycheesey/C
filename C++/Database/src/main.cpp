@@ -22,8 +22,8 @@ int main() {
     // Create database instance
     Database db("HighPerformanceDB");
     
-    // Run benchmarks
-    db.benchmark();
+    // Main application code would go here instead of benchmarks
+    // For example, setting up a query processing loop, REST API, etc.
     
     std::cout << "Database engine initialized successfully." << std::endl;
     return 0;

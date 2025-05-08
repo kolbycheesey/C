@@ -4,8 +4,13 @@ project(HighPerformanceDatabase VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Option to enable or disable tests (default: OFF)
+option(BUILD_TESTS "Build the test suite" OFF)
+option(USE_MONGODB "Enable MongoDB benchmarks" OFF)
+
 # Define source directories
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 set(INCLUDE_DIRS 
     ${SRC_DIR}
     ${SRC_DIR}/database
@@ -24,31 +29,116 @@ if(WIN32)
     add_definitions(-DNOMINMAX)  # Prevent Windows macros from breaking std::min/max
 endif()
 
-# Collect all the source files
-file(GLOB_RECURSE SOURCES 
-    ${SRC_DIR}/*.cpp
+# Add MongoDB support if enabled
+if(USE_MONGODB)
+    # Find MongoDB C++ Driver package
+    find_package(mongocxx REQUIRED)
+    find_package(bsoncxx REQUIRED)
+    
+    # Add MongoDB-related definitions
+    add_definitions(-DUSE_MONGODB)
+endif()
+
+# Collect all the source files for the main application (excluding main.cpp)
+file(GLOB_RECURSE LIB_SOURCES 
+    ${SRC_DIR}/benchmark/*.cpp
+    ${SRC_DIR}/database/*.cpp
+    ${SRC_DIR}/memory/*.cpp
+    ${SRC_DIR}/storage/*.cpp
+    ${SRC_DIR}/utils/*.cpp
+    ${SRC_DIR}/query/*.cpp
 )
 
-# Create the executable
-add_executable(database_engine ${SOURCES})
+# Create the main executable
+add_executable(database_engine ${SRC_DIR}/main.cpp ${LIB_SOURCES})
 target_include_directories(database_engine PRIVATE ${INCLUDE_DIRS})
+
+# Only build tests if BUILD_TESTS is enabled
+if(BUILD_TESTS)
+    # Create a benchmark test executable
+    add_executable(benchmark_test ${TESTS_DIR}/benchmark.cpp ${LIB_SOURCES})
+    target_include_directories(benchmark_test PRIVATE ${INCLUDE_DIRS})
+
+    # Create other test executables
+    file(GLOB TEST_SOURCES ${TESTS_DIR}/*.cpp)
+    foreach(TEST_SOURCE ${TEST_SOURCES})
+        if(NOT TEST_SOURCE MATCHES "benchmark.cpp")
+            get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+            add_executable(${TEST_NAME} ${TEST_SOURCE} ${LIB_SOURCES})
+            target_include_directories(${TEST_NAME} PRIVATE ${INCLUDE_DIRS})
+            
+            # Set the output directory
+            set_target_properties(${TEST_NAME} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests
+            )
+        endif()
+    endforeach()
+endif()
 
 # Add threading support
 find_package(Threads REQUIRED)
 target_link_libraries(database_engine PRIVATE Threads::Threads)
 
+# Conditionally link the test executables with Threads
+if(BUILD_TESTS)
+    target_link_libraries(benchmark_test PRIVATE Threads::Threads)
+
+    # Link with MongoDB if enabled
+    if(USE_MONGODB)
+        target_include_directories(benchmark_test PRIVATE ${MONGOCXX_INCLUDE_DIRS} ${BSONCXX_INCLUDE_DIRS})
+        target_link_libraries(benchmark_test PRIVATE ${MONGOCXX_LIBRARIES} ${BSONCXX_LIBRARIES})
+    endif()
+
+    # Make sure all test executables have the Threads library
+    get_property(TEST_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(TARGET ${TEST_TARGETS})
+        if(TARGET ${TARGET} AND NOT ${TARGET} MATCHES "database_engine|benchmark_test|clean-artifacts|purge-all|ZERO_CHECK|ALL_BUILD")
+            target_link_libraries(${TARGET} PRIVATE Threads::Threads)
+        endif()
+    endforeach()
+endif()
+
 # Windows-specific libraries
 if(WIN32)
     target_link_libraries(database_engine PRIVATE ws2_32)
+    
+    if(BUILD_TESTS)
+        target_link_libraries(benchmark_test PRIVATE ws2_32)
+        
+        # Add ws2_32 to all test targets
+        foreach(TARGET ${TEST_TARGETS})
+            if(TARGET ${TARGET} AND NOT ${TARGET} MATCHES "database_engine|benchmark_test|clean-artifacts|purge-all|ZERO_CHECK|ALL_BUILD")
+                target_link_libraries(${TARGET} PRIVATE ws2_32)
+            endif()
+        endforeach()
+    endif()
 endif()
 
-# Output directory
+# Output directories
 set_target_properties(database_engine PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
+if(BUILD_TESTS)
+    set_target_properties(benchmark_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests
+    )
+
+    # Add an 'all_tests' target that builds all tests
+    add_custom_target(all_tests)
+    add_dependencies(all_tests benchmark_test)
+    foreach(TARGET ${TEST_TARGETS})
+        if(TARGET ${TARGET} AND NOT ${TARGET} MATCHES "database_engine|benchmark_test|clean-artifacts|purge-all|ZERO_CHECK|ALL_BUILD")
+            add_dependencies(all_tests ${TARGET})
+        endif()
+    endforeach()
+endif()
+
 # Installation
 install(TARGETS database_engine DESTINATION bin)
+if(BUILD_TESTS)
+    install(TARGETS benchmark_test DESTINATION bin/tests)
+endif()
 
 # Clean target - only cleans build artifacts, preserves CMake configuration
 if(WIN32)

@@ -271,4 +271,48 @@ std::vector<size_t> LSMTree<Key, Value>::getSSTableCountsByLevel() const {
     return counts;
 }
 
+template <typename Key, typename Value>
+void LSMTree<Key, Value>::clear() {
+    std::cout << "Clearing LSM tree resources..." << std::endl;
+    
+    // Stop background flush thread if it's still running
+    stopRequested = true;
+    flushCV.notify_all();
+    
+    if (flushThread.joinable()) {
+        std::cout << "  Joining LSM flush thread..." << std::endl;
+        flushThread.join();
+        std::cout << "  LSM flush thread joined." << std::endl;
+    }
+
+    std::cout << "  Clearing active memtable..." << std::endl;
+    // Clear active memtable
+    if (activeMemTable) {
+        activeMemTable->clear();
+    }
+    
+    std::cout << "  Clearing immutable memtables (" << immutableMemTables.size() << " tables)..." << std::endl;
+    // Clear immutable memtables
+    for (auto& table : immutableMemTables) {
+        if (table) {
+            table->clear();
+        }
+    }
+    immutableMemTables.clear();
+    
+    std::cout << "  Clearing compaction manager..." << std::endl;
+    // Clear compaction manager
+    if (compactionManager) {
+        compactionManager->shutdown();
+    }
+    
+    std::cout << "  Clearing mmap manager..." << std::endl;
+    // Close any open memory-mapped files
+    if (mmapManager) {
+        mmapManager->closeAll();
+    }
+    
+    std::cout << "LSM tree resources cleared." << std::endl;
+}
+
 #endif // LSM_TREE_TPP

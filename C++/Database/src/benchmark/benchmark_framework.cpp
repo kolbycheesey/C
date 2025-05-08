@@ -16,4 +16,5 @@ void BenchmarkFramework::printResults() const {
     }
     
     std::cout << "=====================================" << std::endl;
-}
+
+} // BenchmarkFramework::printResults

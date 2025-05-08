@@ -196,3 +196,26 @@ bool MMapManager::syncFile(const std::string& path) {
     
     return true;
 }
+
+void MMapManager::closeAll() {
+    std::cout << "MMapManager: Closing all memory mappings (" << mappings.size() << " files)..." << std::endl;
+    
+    // Make a copy of the keys to avoid iterator invalidation during unmapFile calls
+    std::vector<std::string> paths;
+    paths.reserve(mappings.size());
+    
+    for (const auto& [path, _] : mappings) {
+        paths.push_back(path);
+    }
+    
+    // Unmap all files
+    for (const auto& path : paths) {
+        std::cout << "  Unmapping file: " << path << std::endl;
+        unmapFile(path);
+    }
+    
+    // Clear any remaining mappings (should be empty already)
+    mappings.clear();
+    
+    std::cout << "All memory mappings closed." << std::endl;
+}

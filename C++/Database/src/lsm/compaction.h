@@ -89,6 +89,9 @@ public:
     
     // Wait for all compactions to complete
     void waitForCompactions();
+    
+    // Properly shut down the compaction manager and release resources
+    void shutdown();
 };
 
 #include "compaction.tpp"

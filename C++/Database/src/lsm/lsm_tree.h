@@ -75,6 +75,7 @@ public:
     // Administrative operations
     void flush();
     void compact(int level = 0, bool majorCompaction = true);
+    void clear(); // Add method to properly clean up resources
     
     // Statistics
     size_t getMemTableSize() const;
