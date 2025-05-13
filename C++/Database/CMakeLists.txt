@@ -156,7 +156,7 @@ if(LOG_TO_FILE)
     endif()
 endif()
 
-# Collect all the source files for the main application (excluding main.cpp)
+# Collect all the source files for the library (excluding main.cpp)
 file(GLOB_RECURSE LIB_SOURCES 
     ${SRC_DIR}/benchmark/*.cpp
     ${SRC_DIR}/database/*.cpp
@@ -166,23 +166,34 @@ file(GLOB_RECURSE LIB_SOURCES
     ${SRC_DIR}/query/*.cpp
 )
 
-# Create the main executable
-add_executable(database_engine ${SRC_DIR}/main.cpp ${LIB_SOURCES})
+# Create a static library from the sources
+add_library(database_engine_lib STATIC ${LIB_SOURCES})
+target_include_directories(database_engine_lib PUBLIC ${INCLUDE_DIRS})
+set_target_properties(database_engine_lib PROPERTIES
+    OUTPUT_NAME "database_engine"
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+)
+
+# Create the main executable using the library
+add_executable(database_engine ${SRC_DIR}/main.cpp)
 target_include_directories(database_engine PRIVATE ${INCLUDE_DIRS})
+target_link_libraries(database_engine PRIVATE database_engine_lib)
 
 # Only build tests if BUILD_TESTS is enabled
 if(BUILD_TESTS)
     # Create a benchmark test executable
-    add_executable(benchmark_test ${TESTS_DIR}/benchmark.cpp ${LIB_SOURCES})
+    add_executable(benchmark_test ${TESTS_DIR}/benchmark.cpp)
     target_include_directories(benchmark_test PRIVATE ${INCLUDE_DIRS})
+    target_link_libraries(benchmark_test PRIVATE database_engine_lib)
 
     # Create other test executables
     file(GLOB TEST_SOURCES ${TESTS_DIR}/*.cpp)
     foreach(TEST_SOURCE ${TEST_SOURCES})
         if(NOT TEST_SOURCE MATCHES "benchmark.cpp")
             get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-            add_executable(${TEST_NAME} ${TEST_SOURCE} ${LIB_SOURCES})
+            add_executable(${TEST_NAME} ${TEST_SOURCE})
             target_include_directories(${TEST_NAME} PRIVATE ${INCLUDE_DIRS})
+            target_link_libraries(${TEST_NAME} PRIVATE database_engine_lib)
             
             # Set the output directory
             set_target_properties(${TEST_NAME} PROPERTIES
@@ -194,7 +205,7 @@ endif()
 
 # Add threading support
 find_package(Threads REQUIRED)
-target_link_libraries(database_engine PRIVATE Threads::Threads)
+target_link_libraries(database_engine_lib PUBLIC Threads::Threads)
 
 # Conditionally link the test executables with Threads
 if(BUILD_TESTS)
@@ -217,18 +228,7 @@ endif()
 
 # Windows-specific libraries
 if(WIN32)
-    target_link_libraries(database_engine PRIVATE ws2_32)
-    
-    if(BUILD_TESTS)
-        target_link_libraries(benchmark_test PRIVATE ws2_32)
-        
-        # Add ws2_32 to all test targets
-        foreach(TARGET ${TEST_TARGETS})
-            if(TARGET ${TARGET} AND NOT ${TARGET} MATCHES "database_engine|benchmark_test|clean-artifacts|purge-all|ZERO_CHECK|ALL_BUILD")
-                target_link_libraries(${TARGET} PRIVATE ws2_32)
-            endif()
-        endforeach()
-    endif()
+    target_link_libraries(database_engine_lib PUBLIC ws2_32)
 endif()
 
 # Output directories
@@ -253,6 +253,9 @@ endif()
 
 # Installation
 install(TARGETS database_engine DESTINATION bin)
+install(TARGETS database_engine_lib DESTINATION lib)
+install(DIRECTORY ${SRC_DIR}/ DESTINATION include FILES_MATCHING PATTERN "*.h*")
+
 if(BUILD_TESTS)
     install(TARGETS benchmark_test DESTINATION bin/tests)
 endif()

@@ -1,6 +1,105 @@
-# Ignore build directories
-build/*
+# Build directories
+build/
+bin/
+lib/
+x64/
+Debug/
+Release/
+out/
 
-# Ignore object files
+# CMake specific
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+*.dir/
+
+# Visual Studio files
+.vs/
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.VC.opendb
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.pdb
+*.idb
+ipch/
+
+# Compiled Object files
+*.slo
+*.lo
 *.o
 *.obj
+*.ko
+*.elf
+
+# Compiled Dynamic libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Python distribution / packaging
+dist/
+sdist/
+wheels/
+
+# Python virtual environments
+env/
+venv/
+ENV/
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+*.db-journal
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# IDE specific files
+.idea/
+.vscode/
+*.code-workspace
+
+# Project specific
+python-cpp-db-api/build/
+python-cpp-db-api/dist/
+python-cpp-db-api/*.egg-info/

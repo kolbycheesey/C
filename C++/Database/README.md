@@ -31,7 +31,7 @@ cd build
 cmake -DBUILD_TESTS=ON -DUSE_MONGODB=ON ..
 cmake --build .
 
-### Build with MongoDB Support
+### Build with MongoDB for Testing (No longer want to support)
 #### Prerequisites
 You need to install the MongoDB C++ Driver before building with MongoDB support:
 
